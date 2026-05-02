@@ -1,40 +1,309 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>아이올로스의 바람의 집</title>
+<meta charset="UTF-8">
+<title>아이올로스의 바람의 집</title>
 
-  <style>
-    body {
-      background: radial-gradient(circle at top, #000 60%, #050510);
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-      text-align: center;
-      margin-top: 40px;
-      transition: 0.3s;
-    }
+<style>
+body{
+  background: radial-gradient(circle at top,#000 60%,#050510);
+  color:white;
+  font-family:Segoe UI;
+  text-align:center;
+  margin-top:40px;
+}
 
-    h1 {
-      color: #6ec6ff;
-      font-weight: 900;
-      font-size: 30px;
-      text-shadow: 0 0 10px rgba(110,198,255,0.6), 0 0 25px rgba(110,198,255,0.3);
-      margin-bottom: 20px;
-    }
+h1{
+  color:#6ec6ff;
+  text-shadow:0 0 10px #6ec6ff;
+}
 
-    button {
-      margin: 6px;
-      padding: 10px 16px;
-      cursor: pointer;
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(145deg, #1a1a2e, #0f0f1a);
-      color: #e0e0ff;
-      box-shadow: 0 0 8px rgba(110,198,255,0.2);
-      transition: 0.2s;
-      font-weight: 600;
-    }
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:10px;
+  background:#111;
+  color:white;
+  cursor:pointer;
+  position:absolute;
+}
 
+.gray{color:#aaa;font-size:12px;}
+
+#status{
+  position:fixed;
+  top:10px;
+  left:10px;
+  background:rgba(0,0,0,0.6);
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid #333;
+  font-size:12px;
+}
+
+#minimap{
+  position:fixed;
+  top:10px;
+  right:10px;
+  background:rgba(0,0,0,0.6);
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #333;
+}
+
+.row{display:flex;justify-content:center;}
+
+.tile{
+  width:18px;
+  height:18px;
+  margin:2px;
+  border-radius:4px;
+  background:#222;
+}
+
+.current{
+  background:#6ec6ff !important;
+  box-shadow:0 0 8px #6ec6ff;
+}
+
+#pouch{
+  margin-top:20px;
+  position:relative;
+  height:250px;
+}
+
+.hidden{display:none;}
+</style>
+</head>
+
+<body>
+
+<h1>아이올로스의 바람의 집</h1>
+
+<div id="status">🧳 주머니: 없음</div>
+
+<div id="text"></div>
+
+<br>
+
+<button onclick="move(-1)" style="position:static;">⬅ 뒤로</button>
+<button onclick="stay()" style="position:static;">⏸ 멈춤</button>
+<button onclick="move(1)" style="position:static;">앞으로 ➡</button>
+
+<div id="pouch" class="hidden"></div>
+<div id="minimap"></div>
+
+<script>
+
+let rooms=[
+"입구","방1","방2","방3","방4",
+"복도","방5","방6","방7","방8",
+"복도2","방9","방10","방11","출구"
+];
+
+let roomDesc=[
+"문은 이미 닫혀 있다. 뒤돌아보면, 방금 전까지 열려 있던 틈조차 보이지 않는다. 바람이 아주 미세하게, 당신의 등을 떠민다.",
+
+"벽이 조금 더 가까워진 것 같다. 분명 같은 공간인데, 숨이 약간 막힌다. 바람은 여기서 잠깐 멈춘 듯하다.",
+
+"어디선가 스며드는 공기의 흐름이 느껴진다. 귓가에 닿는 소리는 마치 누군가 속삭이는 것처럼 들린다. 하지만 의미는 없다.",
+
+"공기가 눌리는 느낌이다. 발걸음이 바닥에 붙는 것처럼 무겁다. 숨을 들이쉴 때마다, 공간이 당신을 밀어내는 것 같다.",
+
+"복도가 숨을 쉬고 있다. 아주 미세하게 벽이 들썩이는 것 같다. 눈을 감으면, 더 또렷하게 느껴진다.",
+
+"길은 계속 이어진다. 하지만 뒤를 돌아보는 순간, 방금 지나온 길이 낯설게 느껴진다. 바람이 방향을 잃은 듯 흔들린다.",
+
+"누군가 방금까지 여기 있었던 것 같다. 발소리 같은 잔향이 늦게 도착한다. 하지만 아무도 없다.",
+
+"벽 안쪽에서 긁는 소리가 난다. 손을 대면 멈출 것 같지만, 왠지 그렇게 하면 안 될 것 같다.",
+
+"공간이 미묘하게 기울어 있다. 걸음을 옮길수록 중심이 흔들린다. 바람이 위에서 아래로 흐르는 느낌이다.",
+
+"조명이 일정하게 유지되지 않는다. 밝아졌다 어두워지는 순간, 무언가 하나 더 있는 것 같은 기분이 든다.",
+
+"복도가 꺾인다. 그런데 이상하게도, 방향 감각이 맞지 않는다. 분명 오른쪽으로 꺾었는데, 몸은 왼쪽으로 돌아간 것 같다.",
+
+"기억이 희미해진다. 왜 이곳에 들어왔는지, 조금 전까지는 알고 있었던 것 같은데. 바람이 그걸 지워버리는 듯하다.",
+
+"출구가 보인다. 분명히 열려 있다. 하지만 가까워지지 않는다. 걸음을 옮겨도 거리는 줄어들지 않는다.",
+
+"빛이 속삭인다. ‘이제 끝이다’ 라고. 하지만 그 말이 위로인지, 경고인지 알 수 없다."
+];
+
+let windText=[
+"바람이 분다...",
+"숨결이 스친다...",
+"공기가 뒤틀린다..."
+];
+
+let pouchMsg=[
+"무언가 들어 있을지도...",
+"보석일까?",
+"로또일지도 모른다!",
+"열지 않으면 알 수 없다..."
+];
+
+let current=0;
+let pouchRoom=Math.floor(Math.random()*(rooms.length-2))+1;
+
+let hasPouch=false;
+let seenPouch=false;
+let noCount=0;
+let gameEnded=false;
+let promptActive=false;
+let respondedOnce=false;
+
+const text=document.getElementById("text");
+const pouchUI=document.getElementById("pouch");
+const minimap=document.getElementById("minimap");
+const status=document.getElementById("status");
+
+function renderMap(){
+let layout=[
+[14],
+[12,13,11],
+[10],
+[6,7,8,9],
+[5,4,3,2,1],
+[0]
+];
+
+let html="";
+layout.forEach(row=>{
+html+=`<div class='row'>`;
+row.forEach(i=>{
+let cls="tile";
+if(i===current) cls+=" current";
+html+=`<div class="${cls}"></div>`;
+});
+html+="</div>";
+});
+minimap.innerHTML=html;
+}
+
+function updateStatus(){
+status.innerHTML=`🧳 주머니: ${hasPouch?"있음":"없음"}`;
+}
+
+function update(){
+
+if(gameEnded) return;
+
+updateStatus();
+
+text.innerHTML=
+`📍 ${rooms[current]}<br>
+<span class='gray'>${roomDesc[current]}</span><br><br>
+🌬️ ${windText[Math.floor(Math.random()*windText.length)]}`;
+
+renderMap();
+
+if(current===pouchRoom && !seenPouch){
+seenPouch=true;
+promptActive=true;
+
+pouchUI.classList.remove("hidden");
+pouchUI.innerHTML=`
+<p>🧳 주머니 발견</p>
+<button style="position:static" onclick="pick(true)">줍는다</button>
+<button style="position:static" onclick="pick(false)">지나친다</button>
+`;
+return;
+}
+
+if(hasPouch){
+
+let msg=pouchMsg[Math.min(noCount,pouchMsg.length-1)];
+let count=6+noCount*2;
+
+let btns="";
+
+for(let i=0;i<count;i++){
+let x=Math.random()*70+10;
+let y=Math.random()*150+50;
+
+btns+=`
+<button onclick="openPouch(true)"
+style="left:${x}%;top:${y}px;transform:translate(-50%,-50%);">
+열어볼까?
+</button>`;
+}
+
+pouchUI.classList.remove("hidden");
+
+pouchUI.innerHTML=`
+<p>❗ 주머니를 여시겠습니까?</p>
+<p class="gray">${msg}</p>
+
+<div style="position:relative;height:200px;">
+${btns}
+</div>
+
+<div style="margin-top:10px;">
+<button style="position:static" onclick="openPouch(false)">아니오</button>
+</div>
+`;
+
+}else{
+pouchUI.classList.add("hidden");
+}
+
+if(current===rooms.length-1){
+
+gameEnded=true;
+pouchUI.classList.add("hidden");
+updateStatus();
+
+if(hasPouch){
+text.innerHTML=`<h2>🏁 TRUE END</h2><p>바람은 당신을 선택했다.</p>`;
+}else{
+text.innerHTML=`<h2>🏁 NORMAL END</h2><p>아무것도 남지 않았다.</p>`;
+}
+}
+}
+
+function move(dir){
+if(promptActive && !respondedOnce) return;
+
+current+=dir;
+if(current<0) current=0;
+if(current>=rooms.length) current=rooms.length-1;
+
+update();
+}
+
+function stay(){
+update();
+}
+
+function pick(v){
+hasPouch=v;
+promptActive=false;
+respondedOnce=true;
+pouchUI.classList.add("hidden");
+update();
+}
+
+function openPouch(v){
+
+if(!v){
+noCount++;
+pouchUI.classList.add("hidden");
+setTimeout(update,300);
+return;
+}
+
+document.body.innerHTML=
+`<h1>🌪️ BAD END</h1><p>바람이 당신을 삼켰다...</p>`;
+}
+
+update();
+
+</script>
+
+</body>
+</html>
     button:hover {
       transform: scale(1.05);
       box-shadow: 0 0 12px rgba(110,198,255,0.5);
