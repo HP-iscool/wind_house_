@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>아이올로스의 바람의 집</title>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #000 60%, #050510);
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      margin-top: 40px;
+      transition: 0.3s;
+    }
+
+    h1 {
+      color: #6ec6ff;
+      font-weight: 900;
+      font-size: 30px;
+      text-shadow: 0 0 10px rgba(110,198,255,0.6), 0 0 25px rgba(110,198,255,0.3);
+      margin-bottom: 20px;
+    }
+
+    button {
+      margin: 6px;
+      padding: 10px 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #1a1a2e, #0f0f1a);
+      color: #e0e0ff;
+      box-shadow: 0 0 8px rgba(110,198,255,0.2);
+      transition: 0.2s;
+      font-weight: 600;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px rgba(110,198,255,0.5);
+    }
+
+    #game {
+      max-width: 600px;
+      margin: auto;
+      position: relative;
+    }
+
+    #pouch {
+      position: relative;
+      height: 250px;
+      margin-top: 20px;
+    }
+
+    .hidden { display: none; }
+
+    .gray {
+      color: #9a9a9a;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="game">
+
+  <h1>아이올로스의 바람의 집</h1>
+
+  <div id="text"></div>
+
+  <br>
+  <button onclick="move(-1)">⬅ 뒤로</button>
+  <button onclick="stay()">⏸ 멈춤</button>
+  <button onclick="move(1)">앞으로 ➡</button>
+
+  <div id="pouch" class="hidden"></div>
+
+</div>
+
+<script>
+let rooms = [
+  "입구","방1","방2","방3","방4",
+  "복도","방5","방6","방7","방8",
+  "복도2","방9","방10","방11",
+  "출구"
+];
+
+let roomDesc = [
+  "철문이 반쯤 열린 채 숨을 쉬듯 흔들린다.",
+  "벽이 너무 가까워 보인다.",
+  "바람이 한 방향으로만 흐른다.",
+  "천장이 미세하게 내려온 듯하다.",
+  "조명이 불규칙하게 맥동한다.",
+  "복도가 끝없이 늘어지는 느낌이다.",
+  "누군가 지나간 흔적이 있다.",
+  "벽 안에서 소리가 난다.",
+  "문 없는 문틀이 어긋나 있다.",
+  "공기가 무겁게 눌러온다.",
+  "바닥이 미세하게 기울어진다.",
+  "벽이 숨 쉬는 것처럼 움직인다.",
+  "길이 기억보다 길다.",
+  "빛이 출구를 속이고 있다."
+];
+
+let visitCount = Array(rooms.length).fill(0);
+let lastMoveDir = 0;
+
+let windText = [
+  "바람이 분다...",
+  "어디선가 숨결이 스친다...",
+  "공기가 뒤틀린다...",
+  "무언가 지나갔다...",
+  "바람이 이름을 부른다..."
+];
+
+let pouchMessages = [
+  "안쪽에서 속삭임이 들린다...",
+  "손끝이 먼저 반응한다.",
+  "이미 당신을 알고 있는 느낌이다.",
+  "왜 이걸 놓을 수 없을까?",
+  "보석이 들어 있을까?",
+  "로또 복권일지도 몰라!"
+];
+
+let current = 0;
+let pouchRoom = Math.floor(Math.random() * (rooms.length - 2)) + 1;
+
+let hasPouch = false;
+let seenPouch = false;
+let gameEnded = false;
+let suppressPrompt = false;
+let noCount = 0;
+let promptActive = false;
+let respondedOnce = false;
+
+const text = document.getElementById("text");
+const pouchUI = document.getElementById("pouch");
+
+function getRoomText(i) {
+  let base = roomDesc[i];
+  if (visitCount[i] === 0) return base;
+  if (lastMoveDir === -1) return base + " (되돌아온 느낌이 강하다)";
+  if (visitCount[i] > 1) return base + " (처음과 미묘하게 다르다)";
+  return base;
+}
+
+function update() {
+  if (gameEnded) return;
+
+  visitCount[current]++;
+
+  let wind = windText[Math.floor(Math.random() * windText.length)];
+  let desc = getRoomText(current);
+
+  text.innerHTML = `📍 ${rooms[current]}<br><span class="gray">${desc}</span><br><br>🌬️ ${wind}`;
+
+  if (suppressPrompt) return;
+
+  if (current === pouchRoom && !seenPouch) {
+    seenPouch = true;
+    promptActive = true;
+    respondedOnce = false;
+
+    pouchUI.classList.remove("hidden");
+    pouchUI.innerHTML = `
+      <p>🧳 바닥에 주머니가 있다</p>
+      <p>주울까?</p>
+      <button onclick="pick(true)">줍는다</button>
+      <button onclick="pick(false)">지나친다</button>
+    `;
+    return;
+  }
+
+  if (hasPouch) {
+    pouchUI.classList.remove("hidden");
+
+    let dynamicCount = 6 + noCount * 2;
+    let yBtns = "";
+
+    for (let i = 0; i < dynamicCount; i++) {
+      let t = Math.random() * 200;
+      let l = Math.random() * 400;
+      yBtns += `<button style='position:absolute; top:${t}px; left:${l}px'>열어볼까?</button>`;
+    }
+
+    let msgIndex = Math.min(noCount, pouchMessages.length - 1);
+
+    // 🚪 출구 버튼도 확률적으로 등장
+    let exitChance = Math.random();
+    let exitBtn = "";
+
+    if (exitChance > 0.55) {
+      exitBtn = `<button onclick=\"exitGame()\">🚪 출구</button>`;
+    }
+
+    pouchUI.innerHTML = `
+      <p>❗ 주머니를 여시겠습니까?</p>
+      <p class="gray">${pouchMessages[msgIndex]}</p>
+      ${yBtns}
+      <button onclick="openPouch(false)">아니오</button>
+      ${exitBtn}
+    `;
+  } else {
+    pouchUI.classList.add("hidden");
+  }
+
+  if (current === rooms.length - 1) endGame();
+}
+
+function move(dir) {
+  if (gameEnded) return;
+  if (promptActive && !respondedOnce) return;
+
+  if (dir > 0) noCount++;
+
+  lastMoveDir = dir;
+  current += dir;
+
+  if (current < 0) current = 0;
+  if (current >= rooms.length) current = rooms.length - 1;
+
+  update();
+}
+
+function stay() {
+  if (gameEnded) return;
+  if (promptActive && !respondedOnce) return;
+  update();
+}
+
+function pick(choice) {
+  promptActive = false;
+  respondedOnce = true;
+  pouchUI.classList.add("hidden");
+  if (choice) hasPouch = true;
+  update();
+}
+
+function openPouch(choice) {
+  if (gameEnded) return;
+
+  respondedOnce = true;
+
+  if (!choice) {
+    noCount++;
+    pouchUI.classList.add("hidden");
+    suppressPrompt = true;
+    setTimeout(() => {
+      suppressPrompt = false;
+      update();
+    }, 500);
+    return;
+  }
+
+  if (choice) {
+    document.body.innerHTML = `
+      <h1>🌪️</h1>
+      <p>바람이 당신을 끌어올린다</p>
+      <h2>💀 BAD ENDING</h2>
+    `;
+  }
+}
+
+function exitGame() {
+  let roll = Math.random();
+
+  if (roll < 0.4) {
+    // 진짜 탈출
+    current = rooms.length - 1;
+    endGame();
+  } else {
+    // 가짜 출구 → 랜덤 방 이동
+    current = Math.floor(Math.random() * (rooms.length - 2));
+    update();
+  }
+}
+
+function endGame() {
+  gameEnded = true;
+  pouchUI.classList.add("hidden");
+
+  let result = hasPouch ? "🏁 TRUE ENDING" : "🏁 NORMAL ENDING";
+  let pouch = hasPouch ? "🧳 주머니 획득: O" : "🧳 주머니 획득: X";
+
+  text.innerHTML = `📍 출구 도착<br><br>${result}<br><span class="gray">${pouch}</span>`;
+}
+
+update();
+</script>
+
+</body>
+</html>
