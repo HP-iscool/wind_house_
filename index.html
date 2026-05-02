@@ -75,9 +75,75 @@
       color: #9a9a9a;
       font-size: 12px;
     }
+
+    /* Mini Map Styles */
+    #minimap {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 180px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid rgba(110, 198, 255, 0.4);
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 0 15px rgba(110, 198, 255, 0.2);
+    }
+
+    #minimap-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6ec6ff;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    #minimap-container {
+      width: 100%;
+      height: 160px;
+      position: relative;
+      background: rgba(15, 15, 26, 0.5);
+      border-radius: 4px;
+      border: 1px solid rgba(110, 198, 255, 0.2);
+      overflow: hidden;
+    }
+
+    .room-node {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(110, 198, 255, 0.3);
+      border: 1px solid rgba(110, 198, 255, 0.5);
+      transition: all 0.2s;
+    }
+
+    .room-node.visited {
+      background: rgba(110, 198, 255, 0.6);
+      box-shadow: 0 0 6px rgba(110, 198, 255, 0.4);
+    }
+
+    .room-node.current {
+      background: #ffd700;
+      border: 2px solid #ffed4e;
+      width: 14px;
+      height: 14px;
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    }
+
+    .room-line {
+      position: absolute;
+      background: rgba(110, 198, 255, 0.2);
+      height: 1px;
+    }
   </style>
 </head>
 <body>
+
+<div id="minimap">
+  <div id="minimap-title">🗺️ 맵</div>
+  <div id="minimap-container"></div>
+</div>
 
 <div id="game">
 
@@ -152,6 +218,7 @@ let respondedOnce = false;
 
 const text = document.getElementById("text");
 const pouchUI = document.getElementById("pouch");
+const minimapContainer = document.getElementById("minimap-container");
 
 function getRoomText(i) {
   let base = roomDesc[i];
@@ -159,6 +226,42 @@ function getRoomText(i) {
   if (lastMoveDir === -1) return base + " (되돌아온 느낌이 강하다)";
   if (visitCount[i] > 1) return base + " (처음과 미묘하게 다르다)";
   return base;
+}
+
+function updateMinimap() {
+  minimapContainer.innerHTML = "";
+  
+  const containerWidth = 160;
+  const containerHeight = 160;
+  const spacing = containerWidth / (rooms.length - 1);
+  
+  // Draw lines between rooms
+  for (let i = 0; i < rooms.length - 1; i++) {
+    const line = document.createElement("div");
+    line.className = "room-line";
+    line.style.width = spacing + "px";
+    line.style.left = (spacing * i) + "px";
+    line.style.top = (containerHeight / 2) + "px";
+    minimapContainer.appendChild(line);
+  }
+  
+  // Draw room nodes
+  for (let i = 0; i < rooms.length; i++) {
+    const node = document.createElement("div");
+    node.className = "room-node";
+    
+    if (i === current) {
+      node.classList.add("current");
+    } else if (visitCount[i] > 0) {
+      node.classList.add("visited");
+    }
+    
+    node.style.left = (spacing * i - 6) + "px";
+    node.style.top = (containerHeight / 2 - 6) + "px";
+    node.title = `${rooms[i]} (방문 ${visitCount[i]}회)`;
+    
+    minimapContainer.appendChild(node);
+  }
 }
 
 function update() {
@@ -170,6 +273,8 @@ function update() {
   let desc = getRoomText(current);
 
   text.innerHTML = `📍 ${rooms[current]}<br><span class="gray">${desc}</span><br><br>🌬️ ${wind}`;
+
+  updateMinimap();
 
   if (suppressPrompt) return;
 
