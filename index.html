@@ -48,25 +48,8 @@
 
     #pouch {
       position: relative;
+      height: 250px;
       margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    #pouchMessage {
-      margin-bottom: 20px;
-    }
-
-    #pouchButtons {
-      position: relative;
-      width: 400px;
-      height: 200px;
-      margin-top: 20px;
-    }
-
-    #pouchButtons button {
-      position: absolute;
     }
 
     .hidden { display: none; }
@@ -76,103 +59,44 @@
       font-size: 12px;
     }
 
-    /* Mini Map Styles */
     #minimap {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 15px;
+      right: 15px;
       width: 200px;
-      padding: 12px;
-      background: rgba(0, 0, 0, 0.8);
-      border: 2px solid rgba(110, 198, 255, 0.4);
-      border-radius: 8px;
-      z-index: 1000;
-      box-shadow: 0 0 15px rgba(110, 198, 255, 0.2);
+      padding: 10px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(110,198,255,0.3);
+      border-radius: 10px;
+      font-size: 10px;
     }
 
-    #minimap-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #6ec6ff;
-      margin-bottom: 8px;
+    .row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+
+    .row.rev {
+      flex-direction: row-reverse;
+    }
+
+    .room {
+      flex: 1;
       text-align: center;
+      padding: 2px;
+      opacity: 0.4;
     }
 
-    #minimap-container {
-      width: 100%;
-      height: 200px;
-      position: relative;
-      background: rgba(15, 15, 26, 0.5);
-      border-radius: 4px;
-      border: 1px solid rgba(110, 198, 255, 0.2);
-      overflow: hidden;
-    }
-
-    .room-node {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: rgba(110, 198, 255, 0.3);
-      border: 1px solid rgba(110, 198, 255, 0.5);
-      transition: all 0.2s;
-    }
-
-    .room-node.visited {
-      background: rgba(110, 198, 255, 0.6);
-      box-shadow: 0 0 6px rgba(110, 198, 255, 0.4);
-    }
-
-    .room-node.current {
-      background: #ffd700;
-      border: 2px solid #ffed4e;
-      width: 14px;
-      height: 14px;
-      box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
-    }
-
-    .corridor-node {
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      background: rgba(200, 100, 255, 0.3);
-      border: 1px solid rgba(200, 100, 255, 0.5);
-      transition: all 0.2s;
-    }
-
-    .corridor-node.visited {
-      background: rgba(200, 100, 255, 0.6);
-      box-shadow: 0 0 6px rgba(200, 100, 255, 0.4);
-    }
-
-    .corridor-node.current {
-      background: #ff69b4;
-      border: 2px solid #ffb6d9;
-      width: 12px;
-      height: 12px;
-      box-shadow: 0 0 8px rgba(255, 105, 180, 0.8);
-    }
-
-    .room-line {
-      position: absolute;
-      background: rgba(110, 198, 255, 0.2);
-      height: 1px;
-    }
-
-    .corridor-line {
-      position: absolute;
-      background: rgba(200, 100, 255, 0.2);
-      height: 1px;
+    .current {
+      color: #6ec6ff;
+      opacity: 1;
+      font-weight: bold;
+      text-shadow: 0 0 5px #6ec6ff;
     }
   </style>
 </head>
 <body>
-
-<div id="minimap">
-  <div id="minimap-title">🗺️ 맵</div>
-  <div id="minimap-container"></div>
-</div>
 
 <div id="game">
 
@@ -189,231 +113,110 @@
 
 </div>
 
+<div id="minimap"></div>
+
 <script>
-// S-shaped layout with corridors (not rooms)
-let rooms = [
-  "입구",
-  "방1","방2","방3","방4",
-  "복도",      // corridor 1 (not a room)
-  "방5","방6","방7","방8",
-  "복도2",     // corridor 2 (not a room)
-  "방9","방10","방11","방12",
-  "출구"
+let rooms=["입구","방1","방2","방3","방4","복도","방5","방6","방7","방8","복도2","방9","방10","방11","출구"];
+
+let roomDesc=[
+"철문이 반쯤 열린 채 숨을 쉬듯 흔들린다.","벽이 너무 가까워 보인다.","바람이 한 방향으로만 흐른다.","천장이 미세하게 내려온 듯하다.","조명이 불규칙하게 맥동한다.","복도가 끝없이 늘어지는 느낌이다.","누군가 지나간 흔적이 있다.","벽 안에서 소리가 난다.","문 없는 문틀이 어긋나 있다.","공기가 무겁게 눌러온다.","바닥이 미세하게 기울어진다.","벽이 숨 쉬는 것처럼 움직인다.","길이 기억보다 길다.","빛이 출구를 속이고 있다."
 ];
 
-let roomDesc = [
-  "철문이 반쯤 열린 채 숨을 쉬듯 흔들린다.",
-  "벽이 너무 가까워 보인다.",
-  "바람이 한 방향으로만 흐른다.",
-  "천장이 미세하게 내려온 듯하다.",
-  "조명이 불규칙하게 맥동한다.",
-  "복도가 끝없이 늘어지는 느낌이다. (복도는 방이 아니다)",
-  "누군가 지나간 흔적이 있다.",
-  "벽 안에서 소리가 난다.",
-  "문 없는 문틀이 어긋나 있다.",
-  "공기가 무겁게 눌러온다.",
-  "바닥이 미세하게 기울어진다. (복도는 방이 아니다)",
-  "벽이 숨 쉬는 것처럼 움직인다.",
-  "길이 기억보다 길다.",
-  "빛이 출구를 속이고 있다.",
-  "도기막이 나를 보고 있다."
-];
+let visitCount=Array(rooms.length).fill(0);
+let lastMoveDir=0;
 
-let corridorIndices = [5, 10]; // indices of corridors (not rooms)
+let windText=["바람이 분다...","어디선가 숨결이 스친다...","공기가 뒤틀린다...","무언가 지나갔다...","바람이 이름을 부른다..."];
 
-let visitCount = Array(rooms.length).fill(0);
-let lastMoveDir = 0;
+let pouchMessages=["안쪽에서 속삭임이 들린다...","손끝이 먼저 반응한다.","이미 당신을 알고 있는 느낌이다.","왜 이걸 놓을 수 없을까?","보석이 들어 있을까?","로또 복권일지도 몰라!"];
 
-let windText = [
-  "바람이 분다...",
-  "어디선가 숨결이 스친다...",
-  "공기가 뒤틀린다...",
-  "무언가 지나갔다...",
-  "바람이 이름을 부른다..."
-];
+let current=0;
+let pouchRoom=Math.floor(Math.random()*(rooms.length-2))+1;
 
-let pouchMessages = [
-  "안쪽에서 속삭임이 들린다...",
-  "손끝이 먼저 반응한다.",
-  "이미 당신을 알고 있는 느낌이다.",
-  "왜 이걸 놓을 수 없을까?",
-  "보석이 들어 있을까?",
-  "로또 복권일지도 몰라!"
-];
+let hasPouch=false;
+let seenPouch=false;
+let gameEnded=false;
+let suppressPrompt=false;
+let noCount=0;
+let promptActive=false;
+let respondedOnce=false;
 
-let current = 0;
-let pouchRoom = Math.floor(Math.random() * (rooms.length - 2)) + 1;
-while (corridorIndices.includes(pouchRoom)) {
-  pouchRoom = Math.floor(Math.random() * (rooms.length - 2)) + 1;
+const text=document.getElementById("text");
+const pouchUI=document.getElementById("pouch");
+const minimap=document.getElementById("minimap");
+
+function renderMap(){
+  let layout=[[14],[12,13,11],[10],[6,7,8,9],[5,4,3,2,1],[0]];
+  let rev=[false,true,false,false,true,false];
+
+  let html="";
+  layout.forEach((row,i)=>{
+    html+=`<div class='row ${rev[i]?"rev":""}'>`;
+    row.forEach(x=>{
+      html+=`<div class='room ${x===current?"current":""}'>${rooms[x]}</div>`;
+    });
+    html+=`</div>`;
+  });
+
+  minimap.innerHTML=html;
 }
 
-let hasPouch = false;
-let seenPouch = false;
-let gameEnded = false;
-let suppressPrompt = false;
-let noCount = 0;
-let promptActive = false;
-let respondedOnce = false;
-
-const text = document.getElementById("text");
-const pouchUI = document.getElementById("pouch");
-const minimapContainer = document.getElementById("minimap-container");
-
-function getRoomText(i) {
-  let base = roomDesc[i];
-  if (visitCount[i] === 0) return base;
-  if (lastMoveDir === -1) return base + " (되돌아온 느낌이 강하다)";
-  if (visitCount[i] > 1) return base + " (처음과 미묘하게 다르다)";
+function getRoomText(i){
+  let base=roomDesc[i];
+  if(visitCount[i]===0) return base;
+  if(lastMoveDir===-1) return base+" (되돌아온 느낌)";
+  if(visitCount[i]>1) return base+" (이질감)";
   return base;
 }
 
-function updateMinimap() {
-  minimapContainer.innerHTML = "";
-  
-  const containerWidth = 180;
-  const containerHeight = 180;
-  
-  // Map layout positions - S-shaped
-  const positions = [
-    { x: 10, y: 90 },    // 0: entrance
-    { x: 30, y: 30 },    // 1
-    { x: 50, y: 30 },    // 2
-    { x: 70, y: 30 },    // 3
-    { x: 90, y: 30 },    // 4
-    { x: 110, y: 90 },   // 5: corridor 1
-    { x: 130, y: 150 },  // 6
-    { x: 150, y: 150 },  // 7
-    { x: 170, y: 150 },  // 8 (too far, adjust)
-    { x: 170, y: 150 },  // 9 (adjusted)
-    { x: 110, y: 90 },   // 10: corridor 2
-    { x: 90, y: 30 },    // 11
-    { x: 70, y: 30 },    // 12
-    { x: 50, y: 30 },    // 13
-    { x: 30, y: 30 }     // 14: exit
-  ];
-  
-  // Better S-shaped positions
-  const betterPositions = [
-    { x: 20, y: 90 },    // 0: entrance
-    { x: 40, y: 40 },    // 1
-    { x: 60, y: 30 },    // 2
-    { x: 80, y: 30 },    // 3
-    { x: 100, y: 30 },   // 4
-    { x: 120, y: 90 },   // 5: corridor 1 (middle right)
-    { x: 140, y: 150 },  // 6
-    { x: 160, y: 160 },  // 7
-    { x: 170, y: 160 },  // 8
-    { x: 170, y: 140 },  // 9
-    { x: 120, y: 90 },   // 10: corridor 2 (middle right)
-    { x: 100, y: 30 },   // 11
-    { x: 80, y: 30 },    // 12
-    { x: 60, y: 30 },    // 13
-    { x: 40, y: 40 }     // 14: exit
-  ];
-  
-  // Draw lines between consecutive rooms
-  for (let i = 0; i < rooms.length - 1; i++) {
-    const from = betterPositions[i];
-    const to = betterPositions[i + 1];
-    
-    const line = document.createElement("div");
-    const isCorridor = corridorIndices.includes(i) || corridorIndices.includes(i + 1);
-    line.className = isCorridor ? "corridor-line" : "room-line";
-    
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    
-    line.style.width = distance + "px";
-    line.style.left = from.x + "px";
-    line.style.top = from.y + "px";
-    line.style.transform = `rotate(${angle}deg)`;
-    line.style.transformOrigin = "0 0";
-    
-    minimapContainer.appendChild(line);
-  }
-  
-  // Draw room nodes
-  for (let i = 0; i < rooms.length; i++) {
-    const pos = betterPositions[i];
-    const node = document.createElement("div");
-    const isCorridor = corridorIndices.includes(i);
-    node.className = isCorridor ? "corridor-node" : "room-node";
-    
-    if (i === current) {
-      node.classList.add("current");
-    } else if (visitCount[i] > 0) {
-      node.classList.add("visited");
-    }
-    
-    node.style.left = (pos.x - 6) + "px";
-    node.style.top = (pos.y - 6) + "px";
-    node.title = `${rooms[i]} (방문 ${visitCount[i]}회)`;
-    
-    minimapContainer.appendChild(node);
-  }
-}
-
-function update() {
-  if (gameEnded) return;
+function update(){
+  if(gameEnded) return;
 
   visitCount[current]++;
 
-  let wind = windText[Math.floor(Math.random() * windText.length)];
-  let desc = getRoomText(current);
+  let wind=windText[Math.floor(Math.random()*windText.length)];
+  let desc=getRoomText(current);
 
-  text.innerHTML = `📍 ${rooms[current]}<br><span class="gray">${desc}</span><br><br>🌬️ ${wind}`;
+  text.innerHTML=`📍 ${rooms[current]}<br><span class='gray'>${desc}</span><br><br>🌬️ ${wind}`;
 
-  updateMinimap();
+  renderMap();
 
-  if (suppressPrompt) return;
+  if(suppressPrompt) return;
 
-  if (current === pouchRoom && !seenPouch) {
-    seenPouch = true;
-    promptActive = true;
-    respondedOnce = false;
+  if(current===pouchRoom&&!seenPouch){
+    seenPouch=true;
+    promptActive=true;
+    respondedOnce=false;
 
     pouchUI.classList.remove("hidden");
-    pouchUI.innerHTML = `
+    pouchUI.innerHTML=`
       <p>🧳 바닥에 주머니가 있다</p>
-      <p>주울까?</p>
       <button onclick="pick(true)">줍는다</button>
       <button onclick="pick(false)">지나친다</button>
     `;
     return;
   }
 
-  if (hasPouch) {
+  if(hasPouch){
     pouchUI.classList.remove("hidden");
 
-    let dynamicCount = 6 + noCount * 2;
-    let yBtns = "";
+    let msgIndex=Math.min(noCount,pouchMessages.length-1);
 
-    for (let i = 0; i < dynamicCount; i++) {
-      let t = Math.random() * 200;
-      let l = Math.random() * 400;
-      yBtns += `<button style='position:absolute; top:${t}px; left:${l}px'>열어볼까?</button>`;
+    let exitBtn="";
+    if(Math.random()>0.55) exitBtn=`<button onclick="exitGame()">🚪 출구</button>`;
+
+    let dynamicCount=6+noCount*2;
+    let yBtns="";
+
+    for(let i=0;i<dynamicCount;i++){
+      let t=Math.random()*200;
+      let l=Math.random()*400;
+      yBtns+=`<button style='position:absolute;top:${t}px;left:${l}px' onclick="openPouch(true)">열어볼까?</button>`;
     }
 
-    let msgIndex = Math.min(noCount, pouchMessages.length - 1);
-
-    // 🚪 출구 버튼도 확률적으로 등장
-    let exitChance = Math.random();
-    let exitBtn = "";
-
-    if (exitChance > 0.55) {
-      exitBtn = `<button onclick=\"exitGame()\">🚪 출구</button>`;
-    }
-
-    pouchUI.innerHTML = `
-      <div id="pouchMessage">
-        <p>❗ 주머니를 여시겠습니까?</p>
-        <p class="gray">${pouchMessages[msgIndex]}</p>
-      </div>
-      <div id="pouchButtons">
-        ${yBtns}
-      </div>
+    pouchUI.innerHTML=`
+      <p>❗ 주머니를 여시겠습니까?</p>
+      <p class='gray'>${pouchMessages[msgIndex]}</p>
+      ${yBtns}
       <button onclick="openPouch(false)">아니오</button>
       ${exitBtn}
     `;
@@ -421,91 +224,71 @@ function update() {
     pouchUI.classList.add("hidden");
   }
 
-  if (current === rooms.length - 1) endGame();
+  if(current===rooms.length-1) endGame();
 }
 
-function move(dir) {
-  if (gameEnded) return;
-  if (promptActive && !respondedOnce) return;
+function move(dir){
+  if(gameEnded) return;
+  if(promptActive&&!respondedOnce) return;
 
-  if (dir > 0) noCount++;
+  if(dir>0) noCount++;
+  lastMoveDir=dir;
+  current+=dir;
 
-  lastMoveDir = dir;
-  current += dir;
-
-  if (current < 0) current = 0;
-  if (current >= rooms.length) current = rooms.length - 1;
+  if(current<0) current=0;
+  if(current>=rooms.length) current=rooms.length-1;
 
   update();
 }
 
-function stay() {
-  if (gameEnded) return;
-  if (promptActive && !respondedOnce) return;
+function stay(){
+  if(gameEnded) return;
+  if(promptActive&&!respondedOnce) return;
   update();
 }
 
-function pick(choice) {
-  promptActive = false;
-  respondedOnce = true;
+function pick(c){
+  promptActive=false;
+  respondedOnce=true;
   pouchUI.classList.add("hidden");
-  if (choice) hasPouch = true;
+  if(c) hasPouch=true;
   update();
 }
 
-function openPouch(choice) {
-  if (gameEnded) return;
+function openPouch(c){
+  if(gameEnded) return;
 
-  respondedOnce = true;
+  respondedOnce=true;
 
-  if (!choice) {
+  if(!c){
     noCount++;
     pouchUI.classList.add("hidden");
-    suppressPrompt = true;
-    setTimeout(() => {
-      suppressPrompt = false;
-      update();
-    }, 500);
+    suppressPrompt=true;
+    setTimeout(()=>{suppressPrompt=false;update();},500);
     return;
   }
 
-  if (choice) {
-    document.body.innerHTML = `
-      <h1>🌪️</h1>
-      <p>바람이 당신을 끌어올린다</p>
-      <h2>💀 BAD ENDING</h2>
-    `;
-  }
+  document.body.innerHTML=`<h1>🌪️</h1><p>바람이 당신을 끌어올린다</p><h2>💀 BAD ENDING</h2>`;
 }
 
-function exitGame() {
-  let roll = Math.random();
-
-  if (roll < 0.4) {
-    // 진짜 탈출
-    current = rooms.length - 1;
-    endGame();
-  } else {
-    // 가짜 출구 → 랜덤 방 이동
-    do {
-      current = Math.floor(Math.random() * (rooms.length - 2));
-    } while (corridorIndices.includes(current));
-    update();
-  }
+function exitGame(){
+  let roll=Math.random();
+  if(roll<0.4){current=rooms.length-1;endGame();}
+  else{current=Math.floor(Math.random()*(rooms.length-2));update();}
 }
 
-function endGame() {
-  gameEnded = true;
+function endGame(){
+  gameEnded=true;
   pouchUI.classList.add("hidden");
-
-  let result = hasPouch ? "🏁 TRUE ENDING" : "🏁 NORMAL ENDING";
-  let pouch = hasPouch ? "🧳 주머니 획득: O" : "🧳 주머니 획득: X";
-
-  text.innerHTML = `📍 출구 도착<br><br>${result}<br><span class="gray">${pouch}</span>`;
+  text.innerHTML=`📍 출구 도착<br><br>${hasPouch?"🏁 TRUE END":"🏁 NORMAL END"}<br><span class='gray'>주머니:${hasPouch?"O":"X"}</span>`;
+  renderMap();
 }
 
 update();
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
