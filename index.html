@@ -48,8 +48,25 @@
 
     #pouch {
       position: relative;
-      height: 250px;
       margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #pouchMessage {
+      margin-bottom: 20px;
+    }
+
+    #pouchButtons {
+      position: relative;
+      width: 400px;
+      height: 200px;
+      margin-top: 20px;
+    }
+
+    #pouchButtons button {
+      position: absolute;
     }
 
     .hidden { display: none; }
@@ -194,9 +211,13 @@ function update() {
     }
 
     pouchUI.innerHTML = `
-      <p>❗ 주머니를 여시겠습니까?</p>
-      <p class="gray">${pouchMessages[msgIndex]}</p>
-      ${yBtns}
+      <div id="pouchMessage">
+        <p>❗ 주머니를 여시겠습니까?</p>
+        <p class="gray">${pouchMessages[msgIndex]}</p>
+      </div>
+      <div id="pouchButtons">
+        ${yBtns}
+      </div>
       <button onclick="openPouch(false)">아니오</button>
       ${exitBtn}
     `;
