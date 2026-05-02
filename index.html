@@ -81,7 +81,7 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      width: 180px;
+      width: 200px;
       padding: 12px;
       background: rgba(0, 0, 0, 0.8);
       border: 2px solid rgba(110, 198, 255, 0.4);
@@ -100,7 +100,7 @@
 
     #minimap-container {
       width: 100%;
-      height: 160px;
+      height: 200px;
       position: relative;
       background: rgba(15, 15, 26, 0.5);
       border-radius: 4px;
@@ -131,9 +131,38 @@
       box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
     }
 
+    .corridor-node {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: rgba(200, 100, 255, 0.3);
+      border: 1px solid rgba(200, 100, 255, 0.5);
+      transition: all 0.2s;
+    }
+
+    .corridor-node.visited {
+      background: rgba(200, 100, 255, 0.6);
+      box-shadow: 0 0 6px rgba(200, 100, 255, 0.4);
+    }
+
+    .corridor-node.current {
+      background: #ff69b4;
+      border: 2px solid #ffb6d9;
+      width: 12px;
+      height: 12px;
+      box-shadow: 0 0 8px rgba(255, 105, 180, 0.8);
+    }
+
     .room-line {
       position: absolute;
       background: rgba(110, 198, 255, 0.2);
+      height: 1px;
+    }
+
+    .corridor-line {
+      position: absolute;
+      background: rgba(200, 100, 255, 0.2);
       height: 1px;
     }
   </style>
@@ -161,10 +190,14 @@
 </div>
 
 <script>
+// S-shaped layout with corridors (not rooms)
 let rooms = [
-  "입구","방1","방2","방3","방4",
-  "복도","방5","방6","방7","방8",
-  "복도2","방9","방10","방11",
+  "입구",
+  "방1","방2","방3","방4",
+  "복도",      // corridor 1 (not a room)
+  "방5","방6","방7","방8",
+  "복도2",     // corridor 2 (not a room)
+  "방9","방10","방11","방12",
   "출구"
 ];
 
@@ -174,16 +207,19 @@ let roomDesc = [
   "바람이 한 방향으로만 흐른다.",
   "천장이 미세하게 내려온 듯하다.",
   "조명이 불규칙하게 맥동한다.",
-  "복도가 끝없이 늘어지는 느낌이다.",
+  "복도가 끝없이 늘어지는 느낌이다. (복도는 방이 아니다)",
   "누군가 지나간 흔적이 있다.",
   "벽 안에서 소리가 난다.",
   "문 없는 문틀이 어긋나 있다.",
   "공기가 무겁게 눌러온다.",
-  "바닥이 미세하게 기울어진다.",
+  "바닥이 미세하게 기울어진다. (복도는 방이 아니다)",
   "벽이 숨 쉬는 것처럼 움직인다.",
   "길이 기억보다 길다.",
-  "빛이 출구를 속이고 있다."
+  "빛이 출구를 속이고 있다.",
+  "도기막이 나를 보고 있다."
 ];
+
+let corridorIndices = [5, 10]; // indices of corridors (not rooms)
 
 let visitCount = Array(rooms.length).fill(0);
 let lastMoveDir = 0;
@@ -207,6 +243,9 @@ let pouchMessages = [
 
 let current = 0;
 let pouchRoom = Math.floor(Math.random() * (rooms.length - 2)) + 1;
+while (corridorIndices.includes(pouchRoom)) {
+  pouchRoom = Math.floor(Math.random() * (rooms.length - 2)) + 1;
+}
 
 let hasPouch = false;
 let seenPouch = false;
@@ -231,24 +270,76 @@ function getRoomText(i) {
 function updateMinimap() {
   minimapContainer.innerHTML = "";
   
-  const containerWidth = 160;
-  const containerHeight = 160;
-  const spacing = containerWidth / (rooms.length - 1);
+  const containerWidth = 180;
+  const containerHeight = 180;
   
-  // Draw lines between rooms
+  // Map layout positions - S-shaped
+  const positions = [
+    { x: 10, y: 90 },    // 0: entrance
+    { x: 30, y: 30 },    // 1
+    { x: 50, y: 30 },    // 2
+    { x: 70, y: 30 },    // 3
+    { x: 90, y: 30 },    // 4
+    { x: 110, y: 90 },   // 5: corridor 1
+    { x: 130, y: 150 },  // 6
+    { x: 150, y: 150 },  // 7
+    { x: 170, y: 150 },  // 8 (too far, adjust)
+    { x: 170, y: 150 },  // 9 (adjusted)
+    { x: 110, y: 90 },   // 10: corridor 2
+    { x: 90, y: 30 },    // 11
+    { x: 70, y: 30 },    // 12
+    { x: 50, y: 30 },    // 13
+    { x: 30, y: 30 }     // 14: exit
+  ];
+  
+  // Better S-shaped positions
+  const betterPositions = [
+    { x: 20, y: 90 },    // 0: entrance
+    { x: 40, y: 40 },    // 1
+    { x: 60, y: 30 },    // 2
+    { x: 80, y: 30 },    // 3
+    { x: 100, y: 30 },   // 4
+    { x: 120, y: 90 },   // 5: corridor 1 (middle right)
+    { x: 140, y: 150 },  // 6
+    { x: 160, y: 160 },  // 7
+    { x: 170, y: 160 },  // 8
+    { x: 170, y: 140 },  // 9
+    { x: 120, y: 90 },   // 10: corridor 2 (middle right)
+    { x: 100, y: 30 },   // 11
+    { x: 80, y: 30 },    // 12
+    { x: 60, y: 30 },    // 13
+    { x: 40, y: 40 }     // 14: exit
+  ];
+  
+  // Draw lines between consecutive rooms
   for (let i = 0; i < rooms.length - 1; i++) {
+    const from = betterPositions[i];
+    const to = betterPositions[i + 1];
+    
     const line = document.createElement("div");
-    line.className = "room-line";
-    line.style.width = spacing + "px";
-    line.style.left = (spacing * i) + "px";
-    line.style.top = (containerHeight / 2) + "px";
+    const isCorridor = corridorIndices.includes(i) || corridorIndices.includes(i + 1);
+    line.className = isCorridor ? "corridor-line" : "room-line";
+    
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    
+    line.style.width = distance + "px";
+    line.style.left = from.x + "px";
+    line.style.top = from.y + "px";
+    line.style.transform = `rotate(${angle}deg)`;
+    line.style.transformOrigin = "0 0";
+    
     minimapContainer.appendChild(line);
   }
   
   // Draw room nodes
   for (let i = 0; i < rooms.length; i++) {
+    const pos = betterPositions[i];
     const node = document.createElement("div");
-    node.className = "room-node";
+    const isCorridor = corridorIndices.includes(i);
+    node.className = isCorridor ? "corridor-node" : "room-node";
     
     if (i === current) {
       node.classList.add("current");
@@ -256,8 +347,8 @@ function updateMinimap() {
       node.classList.add("visited");
     }
     
-    node.style.left = (spacing * i - 6) + "px";
-    node.style.top = (containerHeight / 2 - 6) + "px";
+    node.style.left = (pos.x - 6) + "px";
+    node.style.top = (pos.y - 6) + "px";
     node.title = `${rooms[i]} (방문 ${visitCount[i]}회)`;
     
     minimapContainer.appendChild(node);
@@ -396,7 +487,9 @@ function exitGame() {
     endGame();
   } else {
     // 가짜 출구 → 랜덤 방 이동
-    current = Math.floor(Math.random() * (rooms.length - 2));
+    do {
+      current = Math.floor(Math.random() * (rooms.length - 2));
+    } while (corridorIndices.includes(current));
     update();
   }
 }
